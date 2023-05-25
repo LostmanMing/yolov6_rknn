@@ -4,7 +4,11 @@
 #include <stdint.h>
 #include <vector>
 #include <map>
+#include "spdlog/spdlog.h"
 #include <opencv2/opencv.hpp>
+#include "im2d.h"
+#include "im2d_single.h"
+#include "RgaUtils.h"
 
 #define OBJ_NAME_MAX_SIZE 16
 #define OBJ_NUMB_MAX_SIZE 64
@@ -77,7 +81,9 @@ std::tuple<float,float,float,float>yolov5BoxConvert(float x1,float y1,float x2,f
 void generateAnchors(
         const std::vector<int>& fpn_strides,
         std::vector<AnchorPoints> &anchor_points,
-        std::vector<float> &stride_tensor
+        std::vector<float> &stride_tensor,
+        int height,
+        int width
 );
 cv::Rect get_rect(cv::Mat& img, float bbox[4]);
 float iou(float lbox[4], float rbox[4]);

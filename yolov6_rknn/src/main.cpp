@@ -23,8 +23,7 @@
 #include <iostream>
 
 #define _BASETSD_H
-#include "RgaUtils.h"
-#include "im2d.h"
+
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -36,7 +35,7 @@
 #include "postprocess.h"
 #include "rga.h"
 #include "rknn_api.h"
-#include "spdlog/spdlog.h"
+
 
 /*-------------------------------------------
                   Functions
@@ -213,8 +212,8 @@ int main() {
         spdlog::info("RGA_VERSION :{} ",ver);
         spdlog::info("resize and padding with RGA!");
 
-        dst_height = img_height > img_width ? height : ((float)width / (float)img_width) * img_height;
-        dst_weight = img_width > img_height ? width  : ((float)height / (float)img_height) * img_width;
+        dst_height = img_height > img_width ? height : ((float)width / (float)img_width) * img_height - int(((float)width / (float)img_width) * img_height) % 4;
+        dst_weight = img_width > img_height ? width  : ((float)height / (float)img_height) * img_width - int(((float)height / (float)img_height) * img_width) % 4;
         resize_buf = malloc(dst_height * dst_weight * channel);
         padding_buf = malloc(height * width * channel);
         memset(resize_buf, 0x00, dst_height * dst_weight * channel);
@@ -253,12 +252,12 @@ int main() {
     } else {
         inputs[0].buf = (void *) img.data;
     }
-
+    //sacle
     float size_scale = std::min(width / (img.cols*1.0), height / (img.rows*1.0));
     std::vector<int> fpn_strides{8, 16, 32};  //三种尺度的stride
     std::vector<AnchorPoints> anchor_points;  //手动造anchor
     std::vector<float> stride_tensor;         //stride对齐
-    generateAnchors(fpn_strides,anchor_points,stride_tensor);   //generate Anchors
+    generateAnchors(fpn_strides,anchor_points,stride_tensor,height,width);   //generate Anchors
 
     gettimeofday(&start_time, NULL);
     rknn_inputs_set(ctx, io_num.n_input, inputs);
@@ -272,18 +271,12 @@ int main() {
     ret = rknn_run(ctx, NULL);
     ret = rknn_outputs_get(ctx, io_num.n_output, outputs, NULL);
 
-
     //yolov6-postprocess
-    //sacle
-
-
     std::vector<Object> objects;  //结果
-    decode_outputs((float *)outputs[0].buf, 8400 * 7, objects, size_scale, img_width, img_height,anchor_points,stride_tensor);
+    decode_outputs((float *)outputs[0].buf, output_attrs[0].dims[1] * output_attrs[0].dims[2], objects, size_scale, img_width, img_height,anchor_points,stride_tensor);
+    draw_objects(orig_img,objects);
     gettimeofday(&stop_time, NULL);
     spdlog::info("once run use {} ms", (__get_us(stop_time) - __get_us(start_time)) / 1000);
-    draw_objects(orig_img,objects);
-
-
     deinitPostProcess();
 
     // release

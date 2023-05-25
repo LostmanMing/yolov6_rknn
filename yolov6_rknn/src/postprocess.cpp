@@ -471,8 +471,7 @@ static void nms_sorted_bboxes(const std::vector<Object>& faceobjects, std::vecto
 void decode_outputs(float * prob, int output_size, std::vector<Object>& objects, float scale, const int img_w, const int img_h, const std::vector<AnchorPoints> &anchor_points, const std::vector<float> &stride_tensor){
     std::vector<Object> proposals;
     generate_yolo_proposals(prob, output_size, BOX_THRESH, proposals,anchor_points,stride_tensor);
-    std::cout << "num of boxes before nms: " << proposals.size() << std::endl;
-
+    spdlog::info("num of boxes before nms: {}",proposals.size());
     qsort_descent_inplace(proposals);
 
     std::vector<int> picked;
@@ -480,8 +479,7 @@ void decode_outputs(float * prob, int output_size, std::vector<Object>& objects,
 
 
     int count = picked.size();
-
-    std::cout << "num of boxes: " << count << std::endl;
+    spdlog::info("num of boxes: {}",count);
 
     objects.resize(count);
     for (int i = 0; i < count; i++)
@@ -507,10 +505,10 @@ void decode_outputs(float * prob, int output_size, std::vector<Object>& objects,
     }
 }
 
-void generateAnchors(const std::vector<int> &fpn_strides, std::vector<AnchorPoints> &anchor_points,std::vector<float> &stride_tensor) {
+void generateAnchors(const std::vector<int> &fpn_strides, std::vector<AnchorPoints> &anchor_points,std::vector<float> &stride_tensor, int height ,int width) {
     float grid_cell_offset = 0.5;
-    std::vector<int> hs = {80, 40, 20};
-    std::vector<int> ws = {80, 40, 20};
+    std::vector<int> hs = {int(height/8), int(height/16), int(height/32)};
+    std::vector<int> ws = {int(width/8), int(width/16), int(width/32)};
     for (int i = 0; i < fpn_strides.size(); i++) {
         int h = hs[i];
         int w = ws[i];
@@ -547,9 +545,9 @@ void draw_objects(const cv::Mat& bgr, const std::vector<Object>& objects)
     for (size_t i = 0; i < objects.size(); i++)
     {
         const Object& obj = objects[i];
+        spdlog::info("{} = {:03.2f}\t at {:03.2f}\t {:03.2f}\t  {:03.2f}\t x {:03.2f}\t ", obj.label, obj.prob,
+                     obj.rect.x, obj.rect.y, obj.rect.width, obj.rect.height);
 
-        fprintf(stderr, "%d = %.5f at %.2f %.2f %.2f x %.2f\n", obj.label, obj.prob,
-                obj.rect.x, obj.rect.y, obj.rect.width, obj.rect.height);
 
         cv::Scalar color = cv::Scalar(color_list[obj.label][0], color_list[obj.label][1], color_list[obj.label][2]);
         float c_mean = cv::mean(color)[0];
@@ -585,8 +583,8 @@ void draw_objects(const cv::Mat& bgr, const std::vector<Object>& objects)
                     cv::FONT_HERSHEY_SIMPLEX, 0.4, txt_color, 1);
     }
 
-    cv::imwrite("/mnt/mmc/zgm/rknn/rknn_yolov5_demo/model/det_res.jpg", image);
-    fprintf(stderr, "save vis file\n");
+    //cv::imwrite("/mnt/mmc/zgm/rknn/rknn_yolov5_demo/model/det_res.jpg", image);
+    //fprintf(stderr, "save vis file\n");
     /* cv::imshow("image", image); */
     /* cv::waitKey(0); */
 }
